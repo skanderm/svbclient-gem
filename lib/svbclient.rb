@@ -76,6 +76,31 @@ class SVBClient
   end
 end
 
+class SVBClient::Account
+  def self.all(client)
+    list = JSON.parse(client.get("/v1/accounts"))["data"]
+    list.map do |account|
+      SVBClient::Account.new(client, account["id"])
+    end
+  end
+
+  def initialize(client, id)
+    @client = client
+    @id = id
+  end
+
+  def data
+    JSON.parse(@client.get("/v1/accounts/#{@id}").body)["data"]
+  end
+
+  def transactions(start_date: nil, end_date: nil)
+    filters = []
+    filters << 'filter%5Bstart_date%5D=' + start_date unless start_date.nil?
+    filters << 'filter%5Bend_date%5D=' + end_date unless end_date.nil?
+    JSON.parse(@client.get("/v1/accounts/#{@id}/transactions", filters.join('&')).body)["data"]
+  end
+end
+
 class SVBClient::ACH
   def initialize(client, id)
     @client = client
@@ -87,7 +112,7 @@ class SVBClient::ACH
   end
 
   def update_status(status)
-    @client.patch("/v1/ach/#{id}", { status: status })
+    @client.patch("/v1/ach/#{@id}", { status: status })
   end
 end
 
@@ -107,14 +132,106 @@ class SVBClient::ACHHandler
     SVBClient::ACH.new(@client, id)
   end
 
+  def all
+    find
+  end
+
   def find(status: nil, effective_date: nil)
-    query = ''
-    query += "filter%5Bstatus%5D=#{status}" unless status.nil?
-    query += "filter%5Beffective_date%5D=#{effective_date}" unless effective_date.nil?
-    response = @client.get("/v1/ach", query)
+    query = []
+    query << "filter%5Bstatus%5D=#{status}" unless status.nil?
+    query << "filter%5Beffective_date%5D=#{effective_date}" unless effective_date.nil?
+    response = @client.get("/v1/ach", query.join('&'))
     list = JSON.parse(response.body)["data"]
     list.map do |ach|
       SVBClient::ACH.new(@client, ach["id"])
+    end
+  end
+end
+
+class SVBClient::BookTransfer
+  def initialize(client, id)
+    @client = client
+    @id = id
+  end
+
+  def data
+    JSON.parse(@client.get("/v1/book/#{@id}").body)["data"]
+  end
+
+  def update_status(status)
+    @client.patch("/v1/book/#{@id}", { status: status })
+  end
+end
+
+class SVBClient::BookTransferHandler
+  def initialize(client)
+    raise 'provide an API client' if client.nil?
+    @client = client
+  end
+
+  def create(transfer_data)
+    response = @client.post('/v1/book', transfer_data)
+    SVBClient::BookTransfer.new(@client, JSON.parse(response.body)["data"]["id"])
+  end
+
+  def get(id)
+    @client.get("/v1/book/#{id}")
+    SVBClient::BookTransfer.new(@client, id)
+  end
+
+  def all
+    response = @client.get("/v1/book")
+    list = JSON.parse(response.body)["data"]
+    list.map do |transfer|
+      SVBClient::BookTransfer.new(@client, transfer["id"])
+    end
+  end
+end
+
+class SVBClient::Wire
+  def initialize(client, id)
+    @client = client
+    @id = id
+  end
+
+  def data
+    JSON.parse(@client.get("/v1/wire/#{@id}").body)["data"]
+  end
+
+  def update_status(status)
+    @client.patch("/v1/wire/#{@id}", { status: status })
+  end
+end
+
+class SVBClient::WireHandler
+  def initialize(client)
+    raise 'provide an API client' if client.nil?
+    @client = client
+  end
+
+  def create(wire_data)
+    response = @client.post('/v1/wire', wire_data)
+    SVBClient::Wire.new(@client, JSON.parse(response.body)["data"]["id"])
+  end
+
+  def get(id)
+    @client.get("/v1/wire/#{id}")
+    SVBClient::Wire.new(@client, id)
+  end
+
+  def all
+    find
+  end
+
+  def find(status: nil, effective_date_start: nil, effective_date_end: nil)
+    query = []
+    query << "filter%5Bstatus%5D=#{status}" unless status.nil?
+    query << "filter%5Beffective_date_start%5D=#{effective_date_start}" unless effective_date_start.nil?
+    query << "filter%5Beffective_date_end%5D=#{effective_date_end}" unless effective_date_end.nil?
+    response = @client.get("/v1/wire", query.join('&'))
+    list = JSON.parse(response.body)["data"]
+    list.map do |wire|
+      SVBClient::Wire.new(@client, wire["id"])
     end
   end
 end
