@@ -3,7 +3,8 @@
 A gem which you can use in your Ruby / Ruby on Rails app to simplify
 HMAC-signing and headers.
 
-It also includes helpers for interacting with the Accounts, ACH, Book Transfer, Wire Transfer, and Onboarding API endpoints.
+It also includes helpers for interacting with the Accounts, ACH, Book Transfer, Virtual Card,
+Wire Transfer, and Onboarding API endpoints.
 
 ## Install
 
@@ -16,7 +17,7 @@ gem install svbclient
 In a Gemfile:
 
 ```ruby
-gem 'svbclient', '~> 3.2.3'
+gem 'svbclient', '~> 3.3.3'
 ```
 
 ## Direct API access
@@ -163,4 +164,32 @@ person = Onboarding.person(address: address, first_name: '', ...)
 
 # file upload
 file = Onboarding.file(file: File.new('test.png'), mimetype: 'image/png')
+```
+
+## VirtualCard API helpers
+
+```ruby
+client = SVBClient.new(api_key, hmac)
+handler = SVBClient::VirtualCardHandler.new(client)
+
+# creating card (returns SVBClient::VirtualCard object)
+card = handler.create({ ... })
+
+# getting a list of all owned cards
+handler.all
+
+# details
+card.data["total_card_amount"]
+
+# retrieving card number
+card.data(true)["card_number"]
+
+# update card with new data
+card.update({ .. })
+
+# email
+card.email_to('someone@example.com')
+
+# deleting card
+card.delete
 ```

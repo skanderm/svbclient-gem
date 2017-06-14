@@ -101,6 +101,55 @@ class SVBClient::Account
   end
 end
 
+class SVBClient::VirtualCard
+  def initialize(client, id)
+    @client = client
+    @id = id
+  end
+
+  def update(card_data)
+    JSON.parse(@client.patch("/v1/virtualcards/#{@id}", card_data).body)["data"]
+  end
+
+  def data(show_card_number: false)
+    query = show_card_number ? 'show_card_number=true' : ''
+    JSON.parse(@client.get("/v1/virtualcards/#{@id}", query).body)["data"]
+  end
+
+  def email_to(address)
+    JSON.parse(@client.post("/v1/virtualcards/#{@id}/email", { email: address }).body)["data"]
+  end
+
+  def delete
+    @client.delete("/v1/virtualcards/#{@id}")
+  end
+end
+
+class SVBClient::VirtualCardHandler
+  def initialize(client)
+    raise 'provide an API client' if client.nil?
+    @client = client
+  end
+
+  def create(card_data)
+    response = @client.post('/v1/virtualcards', card_data)
+    SVBClient::VirtualCard.new(@client, JSON.parse(response.body)["data"]["id"])
+  end
+
+  def get(id)
+    @client.get("/v1/virtualcards/#{id}")
+    SVBClient::VirtualCard.new(@client, id)
+  end
+
+  def all(filters: [])
+    response = @client.get("/v1/virtualcards", filters.join('&'))
+    list = JSON.parse(response.body)["data"]
+    list.map do |card|
+      SVBClient::VirtualCard.new(@client, card["id"])
+    end
+  end
+end
+
 class SVBClient::ACH
   def initialize(client, id)
     @client = client
