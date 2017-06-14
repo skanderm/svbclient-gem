@@ -42,11 +42,13 @@ describe 'simple requests' do
 end
 
 describe 'onboarding helper' do
-  it 'creates an address' do
-    client = SVBClient.new(api_key, hmac)
-    Onboarding = SVBClient::Onboarding.new(client)
+  before do
+    @client = SVBClient.new(api_key, hmac)
+    @onboarding = SVBClient::Onboarding.new(@client)
+  end
 
-    address = Onboarding.address(street_line1: '221B Baker St', city: 'London', country: 'GB')
+  it 'creates an address' do
+    address = @onboarding.address(street_line1: '221B Baker St', city: 'London', country: 'GB')
     expect(address.data["street_line1"]).to eq("221B Baker St")
 
     address.update({ street_line1: "222 Baker St" })
@@ -54,74 +56,88 @@ describe 'onboarding helper' do
   end
 
   it 'fails to create an address without a city or country' do
-    client = SVBClient.new(api_key, hmac)
-    Onboarding = SVBClient::Onboarding.new(client)
-
     expect {
-      address = Onboarding.address(street_line1: '221B Baker St')
+      address = @onboarding.address(street_line1: '221B Baker St')
     }.to raise_error
   end
 end
 
 describe 'Accounts features' do
+  before do
+    @client = SVBClient.new(api_key, hmac)
+  end
+
   it 'lists all accounts' do
-    client = SVBClient.new(api_key, hmac)
-    list = SVBClient::Account.all(client)
+    list = SVBClient::Account.all(@client)
     expect(list.length).to eq(3)
   end
 
-  it 'gets one account details' do
-    client = SVBClient.new(api_key, hmac)
-    acc = SVBClient::Account.new(client, '1002')
+  it 'gets one account details and its transactions' do
+    acc = SVBClient::Account.new(@client, '1002')
     record = acc.data
     expect(record["account_number"]).to eq("3457071804647")
+
     transactions = acc.transactions["transactions"]
     expect(transactions.length).to eq(1000)
   end
 end
 
 describe 'ACH features' do
+  before do
+    @client = SVBClient.new(api_key, hmac)
+    @handler = SVBClient::ACHHandler.new(@client)
+  end
+
   it 'creates an ACH' do
-    client = SVBClient.new(api_key, hmac)
-    handler = SVBClient::ACHHandler.new(client)
-    handler.create({})
+    @handler.create({})
   end
 
   it 'lists all ACHs' do
-    client = SVBClient.new(api_key, hmac)
-    handler = SVBClient::ACHHandler.new(client)
-    handler.all
+    all = @handler.all
+    expect(all.length).to eq(1)
+  end
+
+  it 'gets a specific ACH and status' do
+    mine = @handler.get(3728)
+    expect(mine.data['status']).to eq('canceled')
   end
 
   it 'lists canceled ACHs' do
-    client = SVBClient.new(api_key, hmac)
-    handler = SVBClient::ACHHandler.new(client)
-    cancels = handler.find({ status: 'canceled' })
+    cancels = @handler.find({ status: 'canceled' })
     expect(cancels.length).to eq(1)
   end
 
   it 'lists pending ACHs' do
-    client = SVBClient.new(api_key, hmac)
-    handler = SVBClient::ACHHandler.new(client)
-    pendings = handler.find({ status: 'pending' })
+    pendings = @handler.find({ status: 'pending' })
     expect(pendings.length).to eq(0)
   end
 end
 
 describe 'Book Transfer features' do
+  before do
+    @client = SVBClient.new(api_key, hmac)
+    @handler = SVBClient::BookTransferHandler.new(@client)
+  end
+
   it 'lists all book transfers' do
-    client = SVBClient.new(api_key, hmac)
-    handler = SVBClient::BookTransferHandler.new(client)
-    all = handler.all
+    all = @handler.all
     expect(all.length).to eq(12)
+  end
+
+  it 'gets a specific record' do
+    mine = @handler.get(1011)
+    expect(mine.data['status']).to eq('pending')
   end
 end
 
 describe 'Wire Transfer features' do
+  before do
+    @client = SVBClient.new(api_key, hmac)
+    @handler = SVBClient::WireHandler.new(@client)
+  end
+
   it 'lists all wire transfers' do
-    client = SVBClient.new(api_key, hmac)
-    handler = SVBClient::WireHandler.new(client)
-    all = handler.all
+    all = @handler.all
     expect(all.length).to eq(0)
   end
 end
