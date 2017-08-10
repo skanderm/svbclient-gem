@@ -10,7 +10,7 @@
 
 require 'json'
 require 'openssl'
-require 'Base64'
+require 'base64'
 require 'net/https'
 require 'uri'
 require 'rest-client'
